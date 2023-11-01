@@ -35,6 +35,7 @@ import Control.Monad.State.Strict
 import Control.Monad ( liftM, when, foldM, unless )
 import Control.Monad.Trans ( MonadTrans(lift) )
 import Data.Char (ord)
+import Debug.Trace (traceM)
 import Data.List (intercalate, intersperse, partition, delete, (\\), foldl')
 import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Containers.ListUtils (nubOrd)
@@ -83,6 +84,8 @@ import Text.XML.Light (elChildren, unode, unqual)
 import qualified Text.XML.Light as XML
 import Text.XML.Light.Output
 import Data.String (fromString)
+import Control.Monad.IO.Class (liftIO)
+import System.IO.Unsafe
 
 data WriterState = WriterState
     { stNotes        :: [Html]  -- ^ List of notes
@@ -254,7 +257,7 @@ writeHtmlString' st opts d = do
              (defField "body" (layoutMarkup body) context')
 
 writeHtml' :: PandocMonad m => WriterState -> WriterOptions -> Pandoc -> m Html
-writeHtml' st opts d =
+writeHtml' st opts d = do
   case writerTemplate opts of
        Just _ -> preEscapedText <$> writeHtmlString' st opts d
        Nothing
@@ -929,6 +932,7 @@ blockToHtmlInner opts (CodeBlock (id',classes,keyvals) rawCode) = do
   let tolhs = isEnabled Ext_literate_haskell opts &&
                 any (\c -> T.toLower c == "haskell") classes &&
                 any (\c -> T.toLower c == "literate") classes
+      tolagda = any (\c -> T.toLower c == "agda") classes
       classes' = if tolhs
                     then map (\c -> if T.toLower c == "haskell"
                                        then "literatehaskell"
@@ -942,16 +946,24 @@ blockToHtmlInner opts (CodeBlock (id',classes,keyvals) rawCode) = do
                          (if html5 then formatHtmlBlock else formatHtml4Block)
                             (id'',classes',keyvals) adjCode
                     else Left ""
-  case hlCode of
-         Left msg -> do
-           unless (T.null msg) $
-             report $ CouldNotHighlight msg
-           addAttrs opts (id',classes,keyvals)
-             $ H.pre $ H.code $ toHtml adjCode
-         Right h -> modify (\st -> st{ stHighlighting = True }) >>
-                    -- we set writerIdentifierPrefix to "" since id'' already
-                    -- includes it:
-                    addAttrs opts{writerIdentifierPrefix = ""} (id'',[],keyvals) h
+  case tolagda of
+    True -> do
+      pure $ preEscapedToMarkup $ mconcat
+        [ "```agda\n"
+        , rawCode
+        , "```"
+        ]
+    False ->
+      case hlCode of
+            Left msg -> do
+              unless (T.null msg) $
+                report $ CouldNotHighlight msg
+              addAttrs opts (id',classes,keyvals)
+                $ H.pre $ H.code $ toHtml adjCode
+            Right h -> modify (\st -> st{ stHighlighting = True }) >>
+                        -- we set writerIdentifierPrefix to "" since id'' already
+                        -- includes it:
+                        addAttrs opts{writerIdentifierPrefix = ""} (id'',[],keyvals) h
 blockToHtmlInner opts (BlockQuote blocks) = do
   -- in S5, treat list in blockquote specially
   -- if default is incremental, make it nonincremental;
