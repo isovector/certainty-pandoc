@@ -932,7 +932,8 @@ blockToHtmlInner opts (CodeBlock (id',classes,keyvals) rawCode) = do
   let tolhs = isEnabled Ext_literate_haskell opts &&
                 any (\c -> T.toLower c == "haskell") classes &&
                 any (\c -> T.toLower c == "literate") classes
-      tolagda = any (\c -> T.toLower c == "agda") classes
+      tolagda = isEnabled Ext_literate_agda opts &&
+                any (\c -> T.toLower c == "agda") classes
       classes' = if tolhs
                     then map (\c -> if T.toLower c == "haskell"
                                        then "literatehaskell"
