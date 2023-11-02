@@ -952,7 +952,7 @@ blockToHtmlInner opts (CodeBlock (id',classes,keyvals) rawCode) = do
       pure $ preEscapedToMarkup $ mconcat
         [ "```agda\n"
         , rawCode
-        , "```"
+        , "```\n"
         ]
     False ->
       case hlCode of

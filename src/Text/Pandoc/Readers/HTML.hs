@@ -200,7 +200,7 @@ block = ((do
         "h5" -> pHeader
         "h6" -> pHeader
         "blockquote" -> pBlockQuote
-        "pre" -> pCodeBlock
+        "pre" -> pRawHtmlBlock
         "ul" -> pBulletList
         "ol" -> pOrderedList
         "dl" -> pDefinitionList
@@ -494,7 +494,7 @@ pIframe = try $ do
 
 pRawHtmlBlock :: PandocMonad m => TagParser m Blocks
 pRawHtmlBlock = do
-  raw <- pHtmlBlock "script" <|> pHtmlBlock "style" <|> pHtmlBlock "textarea"
+  raw <- pHtmlBlock "script" <|> pHtmlBlock "style" <|> pHtmlBlock "code" <|> pHtmlBlock "pre" <|> pHtmlBlock "textarea"
           <|> pRawTag
   exts <- getOption readerExtensions
   if extensionEnabled Ext_raw_html exts && not (T.null raw)
@@ -662,7 +662,7 @@ inline = pTagText <|> do
         "svg" -> pSvg
         "bdo" -> pBdo
         "tt" -> pCode
-        "code" -> pCode
+        "code" -> pRawHtmlInline
         "samp" -> pCodeWithClass "samp" "sample"
         "var" -> pCodeWithClass "var" "variable"
         "span" -> pSpan
